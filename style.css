@@ -17,7 +17,7 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: url("/assets/ChatGPT Image Apr 27, 2026, 01_52_16 PM.png") center/cover no-repeat;
+  background: url("./assets/ChatGPT\ Image\ Apr\ 27\,\ 2026\,\ 01_52_16\ PM.png") center/cover no-repeat;
   opacity: 0.15;
   z-index: -1;
 }
@@ -71,7 +71,7 @@ section {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: url("/assets/Programming aesthetic wallpaper.jpg") center/cover no-repeat;
+  background: url("./assets/Programming\ aesthetic\ wallpaper.jpg") center/cover no-repeat;
   position: relative;
 }
 
@@ -210,10 +210,10 @@ h2 {
 }
 
 /* images */
-.preview-1 { background-image: url("/assets/Screenshot 2026-04-24 145221.png"); }
-.preview-2 { background-image: url("/assets/Screenshot 2026-04-27 115535.png"); }
+.preview-1 { background-image: url("./assets/Screenshot 2026-04-24 145221.png"); }
+.preview-2 { background-image: url("./assets/Screenshot 2026-04-27 115535.png"); }
 .preview-3 { background-image: url("project3.jpg"); }
-.preview-blueprint { background-image: url("/assets/Screenshot 2026-04-27 152008.png"); }
+.preview-blueprint { background-image: url("./assets/Screenshot 2026-04-27 152008.png"); }
 
 /* ===== LINKS ===== */
 .links a {
