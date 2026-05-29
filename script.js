@@ -30,16 +30,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   navLinks.forEach((link) => {
-    link.addEventListener("click", (event) => {
-      const target = document.querySelector(link.getAttribute("href"));
+  link.addEventListener("click", (event) => {
+    const href = link.getAttribute("href");
+    if (!href.startsWith("#")) return; // let external links work normally
 
-      if (!target) return;
+    const target = document.querySelector(href);
+    if (!target) return;
 
-      event.preventDefault();
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-      closeMenu();
-    });
+    event.preventDefault();
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    closeMenu();
   });
+});
 
   function updateHeaderAndProgress() {
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
@@ -170,24 +172,34 @@ document.addEventListener("DOMContentLoaded", () => {
       keepInLoop();
     }, { passive: false });
 
-    projectsWrapper.addEventListener("pointerdown", (event) => {
-      isDragging = true;
-      startX = event.clientX;
-      startScroll = projectsWrapper.scrollLeft;
-      projectsWrapper.classList.add("dragging");
-      projectsWrapper.setPointerCapture(event.pointerId);
-    });
+    let dragDistance = 0;
 
-    projectsWrapper.addEventListener("pointermove", (event) => {
-      if (!isDragging) return;
-      projectsWrapper.scrollLeft = startScroll - (event.clientX - startX);
-      keepInLoop();
-    });
+projectsWrapper.addEventListener("pointerdown", (event) => {
+  isDragging = true;
+  dragDistance = 0;          // ← reset on each press
+  startX = event.clientX;
+  startScroll = projectsWrapper.scrollLeft;
+  projectsWrapper.classList.add("dragging");
+  projectsWrapper.setPointerCapture(event.pointerId);
+});
 
-    projectsWrapper.addEventListener("pointerup", () => {
-      isDragging = false;
-      projectsWrapper.classList.remove("dragging");
-    });
+projectsWrapper.addEventListener("pointermove", (event) => {
+  if (!isDragging) return;
+  dragDistance = Math.abs(event.clientX - startX);   // ← track how far
+  projectsWrapper.scrollLeft = startScroll - (event.clientX - startX);
+  keepInLoop();
+});
+
+projectsWrapper.addEventListener("pointerup", (event) => {
+  isDragging = false;
+  projectsWrapper.classList.remove("dragging");
+
+  // If barely moved, it's a click — let links work
+  if (dragDistance < 6) {
+    const link = event.target.closest("a");
+    if (link) window.open(link.href, link.target || "_self");
+  }
+});
 
     projectsWrapper.addEventListener("pointercancel", () => {
       isDragging = false;
