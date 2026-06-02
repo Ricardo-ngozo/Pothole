@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const projectButtons = document.querySelectorAll(".project-btn");
   const heroTitle = document.querySelector("#home h2");
 
+  if (!nav || !menuToggle) return; // prevent crash
+
   const progress = document.createElement("div");
   progress.className = "scroll-progress";
   document.body.appendChild(progress);
@@ -16,255 +18,102 @@ document.addEventListener("DOMContentLoaded", () => {
   function closeMenu() {
     nav.classList.remove("open");
     menuToggle.classList.remove("active");
-    menuToggle.setAttribute("aria-expanded", "false");
-    menuToggle.setAttribute("aria-label", "Open navigation");
     document.body.classList.remove("menu-open");
   }
 
   menuToggle.addEventListener("click", () => {
     const isOpen = nav.classList.toggle("open");
     menuToggle.classList.toggle("active", isOpen);
-    menuToggle.setAttribute("aria-expanded", String(isOpen));
-    menuToggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
-    document.body.classList.toggle("menu-open", isOpen);
+    menuToggle.setAttribute("aria-expanded", isOpen);
   });
 
   navLinks.forEach((link) => {
-  link.addEventListener("click", (event) => {
-    const href = link.getAttribute("href");
-    if (!href.startsWith("#")) return; // let external links work normally
+    link.addEventListener("click", (e) => {
+      const href = link.getAttribute("href");
+      if (!href?.startsWith("#")) return;
 
-    const target = document.querySelector(href);
-    if (!target) return;
+      const target = document.querySelector(href);
+      if (!target) return;
 
-    event.preventDefault();
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-    closeMenu();
+      e.preventDefault();
+      target.scrollIntoView({ behavior: "smooth" });
+      closeMenu();
+    });
   });
-});
 
-  function updateHeaderAndProgress() {
-    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    const progressWidth = maxScroll > 0 ? (window.scrollY / maxScroll) * 100 : 0;
+  function updateProgress() {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const percent = max > 0 ? (window.scrollY / max) * 100 : 0;
 
-    header.classList.toggle("scrolled", window.scrollY > 35);
-    progress.style.width = `${progressWidth}%`;
+    header?.classList.toggle("scrolled", window.scrollY > 35);
+    progress.style.width = percent + "%";
   }
 
-  const navObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
+  window.addEventListener("scroll", updateProgress);
 
-        navLinks.forEach((link) => {
-          link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`);
-        });
-      });
-    },
-    { rootMargin: "-35% 0px -55% 0px", threshold: 0 }
-  );
+  // HERO TEXT
+  function typeHero() {
+    if (!heroTitle) return;
 
-  sections.forEach((section) => navObserver.observe(section));
-
-  const revealObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("show");
-          revealObserver.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.16 }
-  );
-
-  document.querySelectorAll("section, .case, .project-card, .skill").forEach((element) => {
-    element.classList.add("hidden");
-    revealObserver.observe(element);
-  });
-
-  function typeHeroText() {
     const text = "Full Stack Web Developer";
-    let index = 0;
-
+    let i = 0;
     heroTitle.textContent = "";
 
     function type() {
-      heroTitle.textContent = text.slice(0, index);
-      index += 1;
-
-      if (index <= text.length) {
-        window.setTimeout(type, 55);
-      }
+      heroTitle.textContent = text.slice(0, i++);
+      if (i <= text.length) setTimeout(type, 55);
     }
 
     type();
   }
 
-  function setupProjectCarousel() {
+  // SAFE CAROUSEL
+  function setupCarousel() {
     if (!projectsWrapper || !projectGrid) return;
 
-    const originalCards = Array.from(projectGrid.children);
-    originalCards.forEach((card) => projectGrid.appendChild(card.cloneNode(true)));
+    const cards = [...projectGrid.children];
+    cards.forEach((c) => projectGrid.appendChild(c.cloneNode(true)));
 
-    let isPaused = false;
-    let isDragging = false;
-    let startX = 0;
-    let startScroll = 0;
-    let lastTime = 0;
+    let paused = false;
 
-    const getLoopPoint = () => projectGrid.scrollWidth / 2;
-    const getStep = () => {
-      const card = projectGrid.querySelector(".project-card");
-      const gap = parseFloat(getComputedStyle(projectGrid).gap) || 24;
-      return card ? card.offsetWidth + gap : 320;
-    };
-
-    function keepInLoop() {
-      const loopPoint = getLoopPoint();
-
-      if (projectsWrapper.scrollLeft >= loopPoint) {
-        projectsWrapper.scrollLeft -= loopPoint;
+    function loop() {
+      if (!paused) {
+        projectsWrapper.scrollLeft += 1;
+        if (projectsWrapper.scrollLeft >= projectGrid.scrollWidth / 2) {
+          projectsWrapper.scrollLeft = 0;
+        }
       }
-
-      if (projectsWrapper.scrollLeft < 0) {
-        projectsWrapper.scrollLeft += loopPoint;
-      }
+      requestAnimationFrame(loop);
     }
 
-    function highlightFocusedCard() {
-      const center = projectsWrapper.getBoundingClientRect().left + projectsWrapper.clientWidth / 2;
-
-      projectGrid.querySelectorAll(".project-card").forEach((card) => {
-        const rect = card.getBoundingClientRect();
-        const cardCenter = rect.left + rect.width / 2;
-        card.classList.toggle("in-focus", Math.abs(center - cardCenter) < rect.width * 0.55);
+    projectButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        projectsWrapper.scrollBy({
+          left: Number(btn.dataset.direction) * 300,
+          behavior: "smooth",
+        });
       });
+    });
+
+    projectsWrapper.addEventListener("mouseenter", () => (paused = true));
+    projectsWrapper.addEventListener("mouseleave", () => (paused = false));
+
+    requestAnimationFrame(loop);
+  }
+
+  // KEYBOARD FIX
+  window.addEventListener("keydown", (e) => {
+    if (!projectsWrapper) return;
+
+    if (e.key === "ArrowRight") {
+      projectsWrapper.scrollBy({ left: 300, behavior: "smooth" });
     }
 
-    function animate(timestamp) {
-      if (!lastTime) lastTime = timestamp;
-
-      const elapsed = timestamp - lastTime;
-      lastTime = timestamp;
-
-      if (!isPaused && !isDragging && window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
-        projectsWrapper.scrollLeft += elapsed * 0.035;
-        keepInLoop();
-      }
-
-      highlightFocusedCard();
-      requestAnimationFrame(animate);
-    }
-
-    projectButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const direction = Number(button.dataset.direction);
-        projectsWrapper.scrollBy({ left: direction * getStep(), behavior: "smooth" });
-      });
-    });
-
-    projectsWrapper.addEventListener("wheel", (event) => {
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-
-      event.preventDefault();
-      projectsWrapper.scrollLeft += event.deltaY;
-      keepInLoop();
-    }, { passive: false });
-
-    let dragDistance = 0;
-
-projectsWrapper.addEventListener("pointerdown", (event) => {
-  isDragging = true;
-  dragDistance = 0;          // ← reset on each press
-  startX = event.clientX;
-  startScroll = projectsWrapper.scrollLeft;
-  projectsWrapper.classList.add("dragging");
-  projectsWrapper.setPointerCapture(event.pointerId);
-});
-
-projectsWrapper.addEventListener("pointermove", (event) => {
-  if (!isDragging) return;
-  dragDistance = Math.abs(event.clientX - startX);   // ← track how far
-  projectsWrapper.scrollLeft = startScroll - (event.clientX - startX);
-  keepInLoop();
-});
-
-projectsWrapper.addEventListener("pointerup", (event) => {
-  isDragging = false;
-  projectsWrapper.classList.remove("dragging");
-
-  // If barely moved, it's a click — let links work
-  if (dragDistance < 6) {
-    const link = event.target.closest("a");
-    if (link) window.open(link.href, link.target || "_self");
-  }
-});
-
-    projectsWrapper.addEventListener("pointercancel", () => {
-      isDragging = false;
-      projectsWrapper.classList.remove("dragging");
-    });
-
-    projectsWrapper.addEventListener("mouseenter", () => {
-      isPaused = true;
-    });
-
-    projectsWrapper.addEventListener("mouseleave", () => {
-      isPaused = false;
-    });
-
-    projectGrid.querySelectorAll(".project-card").forEach((card) => {
-      card.addEventListener("pointermove", (event) => {
-        const rect = card.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        const rotateY = (x / rect.width - 0.5) * 10;
-        const rotateX = (0.5 - y / rect.height) * 8;
-
-        card.style.transform = `translateY(-8px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-      });
-
-      card.addEventListener("pointerleave", () => {
-        card.style.transform = "";
-      });
-    });
-
-    requestAnimationFrame(animate);
-  }
-
-  function setupCursorGlow() {
-    if (!window.matchMedia("(pointer: fine)").matches) return;
-
-    const glow = document.createElement("div");
-    glow.className = "cursor-glow";
-    document.body.appendChild(glow);
-
-    document.addEventListener("pointermove", (event) => {
-      glow.style.left = `${event.clientX}px`;
-      glow.style.top = `${event.clientY}px`;
-    });
-  }
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeMenu();
-
-    if (document.querySelector("#projects.show")) {
-      if (event.key === "ArrowRight") {
-        projectsWrapper.scrollBy({ left: 320, behavior: "smooth" });
-      }
-
-      if (event.key === "ArrowLeft") {
-        projectsWrapper.scrollBy({ left: -320, behavior: "smooth" });
-      }
+    if (e.key === "ArrowLeft") {
+      projectsWrapper.scrollBy({ left: -300, behavior: "smooth" });
     }
   });
 
-  window.addEventListener("scroll", updateHeaderAndProgress, { passive: true });
-  window.addEventListener("resize", closeMenu);
-
-  updateHeaderAndProgress();
-  typeHeroText();
-  setupProjectCarousel();
-  setupCursorGlow();
+  typeHero();
+  setupCarousel();
 });
